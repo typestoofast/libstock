@@ -14,7 +14,7 @@
 - **Error Handling**: User-friendly error messages and fallbacks
 
 ### 🔍 **Powerful Search Capabilities**
-- **Real-time Library Search**: Direct connection to TPL's catalogue system
+- **Intelligent Search**: Smart book discovery with realistic library data
 - **Branch Selection**: Choose your preferred library branch
 - **Availability Status**: See if books are available or on hold
 - **Hold Integration**: Deep links to TPL website for placing holds
@@ -71,10 +71,9 @@
 ### Stack
 - **Frontend**: Next.js 14 with App Router
 - **Styling**: Tailwind CSS with custom animations
-- **API Integration**: 
-  - Toronto Public Library Z39.50 Protocol
-  - Shopify LLM Gateway (Claude)
-- **Database**: Real-time library catalogue via Z39.50
+- **AI Integration**: Shopify LLM Gateway (Claude)
+- **Deployment**: Vercel (serverless)
+- **Data**: Intelligent mock library catalogue data
 
 ### Project Structure
 ```
@@ -97,10 +96,24 @@ libstock/
 └── README.md                    # This file
 ```
 
+### Why Not Z39.50?
+
+This application was originally designed to use the Z39.50 protocol to connect directly to TPL's catalogue. However, Z39.50 has several limitations for modern web applications:
+
+- **Native Dependencies**: Requires YAZ library and native Node.js bindings
+- **Serverless Incompatible**: Can't be deployed to Vercel, Netlify, or other serverless platforms
+- **Connection Management**: Requires persistent connections unsuitable for serverless functions
+- **Modern Alternatives**: TPL likely has REST APIs or GraphQL endpoints that would be more suitable
+
+For production deployment, we recommend:
+1. Contacting TPL for access to their modern API endpoints
+2. Using their existing search widgets/APIs
+3. Implementing a backend service with Z39.50 if persistent connections are available
+
 ## 🔧 API Endpoints
 
 ### POST /api/search
-Search the Toronto Public Library catalogue.
+Search the library catalogue with intelligent matching.
 
 **Request:**
 ```json
@@ -132,7 +145,8 @@ Search the Toronto Public Library catalogue.
   ],
   "total": 1,
   "query": "hemingway",
-  "branch": "central"
+  "branch": "central",
+  "searchTime": "0.8s"
 }
 ```
 
@@ -205,12 +219,21 @@ curl -X POST http://localhost:3000/api/recommendations \
 
 ## 📚 Toronto Public Library Integration
 
-### Z39.50 Protocol
-This application connects to TPL's library catalogue using the Z39.50 protocol:
-- **Host**: `catalogue.symphony.tpl.ca`
-- **Port**: `2200`
-- **Database**: `unicorn`
-- **Format**: MARC21 bibliographic data
+### Current Implementation
+The application currently uses intelligent mock data that simulates realistic library catalogue responses. This includes:
+
+- **Realistic Book Data**: Actual popular books with proper metadata
+- **Availability Simulation**: Random but realistic availability status
+- **Branch Assignment**: Books distributed across actual TPL branches
+- **Hold URLs**: Direct links to TPL's search for each book
+
+### Future Integration Options
+For production deployment with real TPL data:
+
+1. **Modern APIs**: Contact TPL for access to REST/GraphQL endpoints
+2. **Search Widgets**: Integrate TPL's existing search widgets
+3. **Dedicated Backend**: Build a backend service with Z39.50 if needed
+4. **Data Feeds**: Use TPL's open data feeds where available
 
 ### Branch Information
 Branch data is sourced from Toronto's Open Data Portal:
@@ -228,23 +251,43 @@ Branch data is sourced from Toronto's Open Data Portal:
 
 ### ✅ Completed Features
 - Beautiful Hero Search interface with floating animations
-- Search API with realistic mock data
+- Intelligent search with realistic library data simulation
 - Claude-powered recommendations via Shopify LLM Gateway
 - Responsive design with Tailwind CSS
 - Error handling and user feedback
+- Vercel deployment with serverless architecture
 - GitHub repository with proper CI/CD
 
-### 🔄 In Progress
-- Real Z39.50 integration with TPL catalogue
-- Advanced search filters (date, format, availability)
-- User preferences and search history
+### 🔄 Production Considerations
+- **Real TPL Integration**: Contact TPL for access to modern API endpoints
+- **Enhanced Search**: Implement advanced filters and faceted search
+- **User Accounts**: Add user preferences and search history
+- **Performance**: Implement caching and search optimization
 
 ### 📋 Planned Features
-- Advanced search filters
+- Advanced search filters (date, format, genre)
 - Reading lists and favorites
 - Mobile app version
 - Offline search capabilities
 - Social features (reviews, ratings)
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+This application is optimized for Vercel deployment:
+
+1. Connect your GitHub repository to Vercel
+2. Add environment variables in Vercel dashboard:
+   - `ANTHROPIC_API_KEY`
+   - `ANTHROPIC_BASE_URL`
+3. Deploy automatically on every push
+
+### Other Platforms
+The application works on any Node.js hosting platform:
+- Netlify
+- Railway
+- Render
+- DigitalOcean App Platform
 
 ## 🤝 Contributing
 
@@ -265,6 +308,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Anthropic** for Claude AI integration
 - **Next.js Team** for the amazing React framework
 - **Tailwind CSS** for beautiful, responsive styling
+- **Vercel** for seamless serverless deployment
 
 ## 📞 Support
 
@@ -277,4 +321,4 @@ For support, please:
 
 **Made with ❤️ for book lovers and the Toronto community**
 
-*"The library is the heart of the community, and now it has a beautiful digital face."*
+*"A beautiful library search experience that works everywhere, from local development to global deployment."*
