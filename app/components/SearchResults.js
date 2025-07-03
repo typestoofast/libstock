@@ -21,7 +21,7 @@ export default function SearchResults({ results, recommendations, query, error }
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
           <h2 className="text-xl font-semibold text-white">
-            Library Results for "{query}"
+            Library Results for &quot;{query}&quot;
           </h2>
           <p className="text-blue-100 text-sm">
             {results?.total || 0} items found in Toronto Public Library
@@ -42,7 +42,7 @@ export default function SearchResults({ results, recommendations, query, error }
               </svg>
               <h3 className="text-lg font-medium text-gray-700 mb-2">No Results Found</h3>
               <p className="text-gray-500">
-                No books found matching "{query}". Try different keywords or check the spelling.
+                No books found matching &quot;{query}&quot;. Try different keywords or check the spelling.
               </p>
             </div>
           )}
