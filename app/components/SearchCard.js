@@ -25,35 +25,20 @@ export default function SearchCard() {
       
       // Perform library search and get recommendations in parallel
       const [searchResponse, recommendationsResponse] = await Promise.all([
-        fetch('/api/search', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ query, branch }),
-        }),
-        fetch('/api/recommendations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ query }),
-        })
+        fetchAPI('/api/search', { query, branch }),
+        fetchAPI('/api/recommendations', { query })
       ]);
 
-      const searchData = await searchResponse.json();
-      const recommendationsData = await recommendationsResponse.json();
-
-      if (!searchResponse.ok) {
-        throw new Error(searchData.error || 'Search failed');
+      if (searchResponse.error) {
+        throw new Error(searchResponse.error);
       }
 
-      setSearchResults(searchData);
+      setSearchResults(searchResponse);
       
-      if (recommendationsResponse.ok) {
-        setRecommendations(recommendationsData);
+      if (recommendationsResponse && !recommendationsResponse.error) {
+        setRecommendations(recommendationsResponse);
       } else {
-        console.warn('Recommendations failed:', recommendationsData.error);
+        console.warn('Recommendations failed:', recommendationsResponse?.error || 'Unknown error');
       }
 
     } catch (error) {
@@ -61,6 +46,40 @@ export default function SearchCard() {
       setError(error.message || 'Failed to search library catalogue');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Helper function to safely fetch and parse JSON
+  const fetchAPI = async (url, data) => {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('Non-JSON response:', textResponse);
+        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return result;
+    } catch (error) {
+      if (error.message.includes('Unexpected token')) {
+        throw new Error('Server returned an invalid response. Please try again.');
+      }
+      throw error;
     }
   };
 
@@ -132,7 +151,15 @@ export default function SearchCard() {
     <div className="bg-white rounded-2xl shadow-2xl p-8 backdrop-blur-sm bg-white/95">
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-700">{error}</p>
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <h4 className="text-sm font-medium text-red-800">Search Error</h4>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+            </div>
+          </div>
         </div>
       )}
       

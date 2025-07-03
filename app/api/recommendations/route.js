@@ -1,11 +1,4 @@
 import { NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
-
-// Initialize Anthropic client with Shopify LLM gateway
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  baseURL: process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com',
-});
 
 export async function POST(request) {
   try {
@@ -30,20 +23,36 @@ export async function POST(request) {
     // Create a prompt for Claude to generate book recommendations
     const prompt = createRecommendationPrompt(query, searchResults);
 
-    // Get recommendations from Claude
-    const message = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
-      max_tokens: 1000,
-      messages: [
-        {
-          role: "user",
-          content: prompt
-        }
-      ]
+    // Use OpenAI-compatible endpoint format for Shopify LLM Gateway
+    const response = await fetch(`${process.env.ANTHROPIC_BASE_URL}/v1/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.ANTHROPIC_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 1000,
+        temperature: 0.7
+      })
     });
 
-    // Parse Claude's response
-    const recommendations = parseClaudeResponse(message.content[0].text);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API Error:', response.status, errorText);
+      throw new Error(`API request failed: ${response.status} ${errorText}`);
+    }
+
+    const data = await response.json();
+    
+    // Parse the response content
+    const recommendations = parseClaudeResponse(data.choices[0].message.content);
 
     return NextResponse.json({
       recommendations,

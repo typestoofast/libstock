@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server';
-import zoom from 'node-zoom2';
 
-// Toronto Public Library Z39.50 configuration
-const TPL_CONFIG = {
-  host: 'catalogue.symphony.tpl.ca',
-  port: 2200,
-  database: 'unicorn',
-  charset: 'UTF-8'
-};
+// Mock implementation while we fix Z39.50 library issues
+// TODO: Replace with real Z39.50 integration once node-zoom2 bindings are working
 
 export async function POST(request) {
   try {
@@ -22,88 +16,18 @@ export async function POST(request) {
 
     console.log(`Searching for: "${query}" at branch: ${branch || 'any'}`);
 
-    // Create Z39.50 connection
-    const connection = new zoom.Connection();
-    
-    // Connect to TPL catalogue
-    await new Promise((resolve, reject) => {
-      connection.connect(TPL_CONFIG.host, TPL_CONFIG.port, (error) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve();
-        }
-      });
-    });
+    // Simulate search delay
+    await new Promise(resolve => setTimeout(resolve, 800));
 
-    // Set database
-    connection.option('databaseName', TPL_CONFIG.database);
-    connection.option('charset', TPL_CONFIG.charset);
-
-    // Build search query for title, author, or subject
-    // Using PQF (Prefix Query Format) for Z39.50
-    const searchQuery = `@or @or @attr 1=4 "${query}" @attr 1=1003 "${query}" @attr 1=21 "${query}"`;
-    
-    // Perform search
-    const resultSet = await new Promise((resolve, reject) => {
-      connection.search(searchQuery, (error, results) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(results);
-        }
-      });
-    });
-
-    const resultCount = resultSet.size();
-    console.log(`Found ${resultCount} results`);
-
-    if (resultCount === 0) {
-      connection.close();
-      return NextResponse.json({
-        results: [],
-        total: 0,
-        query,
-        branch
-      });
-    }
-
-    // Get up to 10 records
-    const maxResults = Math.min(resultCount, 10);
-    const records = [];
-
-    for (let i = 0; i < maxResults; i++) {
-      try {
-        const record = await new Promise((resolve, reject) => {
-          resultSet.getRecord(i, 'xml', (error, rec) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve(rec);
-            }
-          });
-        });
-
-        if (record) {
-          const parsedRecord = parseMARC21Record(record.raw, branch);
-          if (parsedRecord) {
-            records.push(parsedRecord);
-          }
-        }
-      } catch (error) {
-        console.error(`Error getting record ${i}:`, error);
-        // Continue to next record
-      }
-    }
-
-    // Close connection
-    connection.close();
+    // Mock search results based on query
+    const mockResults = generateMockResults(query, branch);
 
     return NextResponse.json({
-      results: records,
-      total: resultCount,
+      results: mockResults,
+      total: mockResults.length,
       query,
-      branch
+      branch,
+      note: "Mock data - Z39.50 integration coming soon"
     });
 
   } catch (error) {
@@ -115,52 +39,144 @@ export async function POST(request) {
   }
 }
 
-// Parse MARC21 XML record and extract useful information
-function parseMARC21Record(xmlData, preferredBranch) {
-  try {
-    // This is a simplified parser - in production you'd want a proper XML parser
-    const record = {};
-    
-    // Extract title (field 245)
-    const titleMatch = xmlData.match(/<datafield tag="245"[^>]*>.*?<subfield code="a">([^<]+)/s);
-    record.title = titleMatch ? titleMatch[1].trim() : 'Unknown Title';
-    
-    // Extract author (field 100 or 700)
-    const authorMatch = xmlData.match(/<datafield tag="(?:100|700)"[^>]*>.*?<subfield code="a">([^<]+)/s);
-    record.author = authorMatch ? authorMatch[1].trim() : 'Unknown Author';
-    
-    // Extract ISBN (field 020)
-    const isbnMatch = xmlData.match(/<datafield tag="020"[^>]*>.*?<subfield code="a">([^<]+)/s);
-    record.isbn = isbnMatch ? isbnMatch[1].trim() : null;
-    
-    // Extract publication year (field 008 or 260)
-    const yearMatch = xmlData.match(/<controlfield tag="008">(.{7})(\d{4})/s) || 
-                     xmlData.match(/<datafield tag="260"[^>]*>.*?<subfield code="c">.*?(\d{4})/s);
-    record.year = yearMatch ? yearMatch[2] || yearMatch[1] : null;
-    
-    // Extract call number (field 050 or 082)
-    const callMatch = xmlData.match(/<datafield tag="(?:050|082)"[^>]*>.*?<subfield code="a">([^<]+)/s);
-    record.callNumber = callMatch ? callMatch[1].trim() : null;
-    
-    // Extract record ID from control field 001
-    const recordIdMatch = xmlData.match(/<controlfield tag="001">([^<]+)/s);
-    record.recordId = recordIdMatch ? recordIdMatch[1].trim() : null;
-    
-    // Simplified availability check (would need real-time circulation data)
-    record.availability = {
+function generateMockResults(query, preferredBranch) {
+  const queryLower = query.toLowerCase();
+  
+  // Sample book database
+  const sampleBooks = [
+    {
+      title: "The Seven Husbands of Evelyn Hugo",
+      author: "Taylor Jenkins Reid",
+      isbn: "9781501161933",
+      year: "2017",
+      callNumber: "FIC REID",
+      recordId: "12345001",
+      subjects: ["fiction", "hollywood", "celebrity", "lgbtq", "romance"]
+    },
+    {
+      title: "Where the Crawdads Sing", 
+      author: "Delia Owens",
+      isbn: "9780735219090",
+      year: "2018", 
+      callNumber: "FIC OWENS",
+      recordId: "12345002",
+      subjects: ["fiction", "mystery", "nature", "coming of age", "southern"]
+    },
+    {
+      title: "Educated",
+      author: "Tara Westover", 
+      isbn: "9780399590504",
+      year: "2018",
+      callNumber: "B WESTOVER",
+      recordId: "12345003",
+      subjects: ["memoir", "education", "family", "survival", "mormon"]
+    },
+    {
+      title: "The Midnight Library",
+      author: "Matt Haig",
+      isbn: "9780525559474", 
+      year: "2020",
+      callNumber: "FIC HAIG",
+      recordId: "12345004",
+      subjects: ["fiction", "philosophy", "choices", "regret", "fantasy"]
+    },
+    {
+      title: "Atomic Habits",
+      author: "James Clear",
+      isbn: "9780735211292",
+      year: "2018", 
+      callNumber: "158.1 CLEAR",
+      recordId: "12345005",
+      subjects: ["self help", "habits", "productivity", "psychology", "behavior"]
+    },
+    {
+      title: "The Thursday Murder Club",
+      author: "Richard Osman",
+      isbn: "9781984880987",
+      year: "2020",
+      callNumber: "FIC OSMAN", 
+      recordId: "12345006",
+      subjects: ["mystery", "elderly", "crime", "friendship", "humor"]
+    },
+    {
+      title: "Dune",
+      author: "Frank Herbert",
+      isbn: "9780441172719",
+      year: "1965",
+      callNumber: "SF HERBERT",
+      recordId: "12345007", 
+      subjects: ["science fiction", "space", "politics", "ecology", "epic"]
+    },
+    {
+      title: "The Psychology of Programming",
+      author: "Gerald M. Weinberg",
+      isbn: "9780932633420", 
+      year: "1998",
+      callNumber: "004.019 WEIN",
+      recordId: "12345008",
+      subjects: ["programming", "psychology", "software", "development", "computer science"]
+    },
+    {
+      title: "Clean Code",
+      author: "Robert C. Martin",
+      isbn: "9780132350884",
+      year: "2008",
+      callNumber: "005.1 MARTIN", 
+      recordId: "12345009",
+      subjects: ["programming", "software", "clean code", "development", "practices"]
+    },
+    {
+      title: "The Handmaid's Tale",
+      author: "Margaret Atwood",
+      isbn: "9780385490818",
+      year: "1985",
+      callNumber: "FIC ATWOOD",
+      recordId: "12345010",
+      subjects: ["dystopian", "feminism", "future", "religion", "oppression"]
+    }
+  ];
+
+  // Filter books based on query
+  const matchingBooks = sampleBooks.filter(book => {
+    const searchText = `${book.title} ${book.author} ${book.subjects.join(' ')}`.toLowerCase();
+    const queryWords = queryLower.split(' ').filter(word => word.length > 2);
+    return queryWords.some(word => searchText.includes(word));
+  });
+
+  // If no matches, return a few popular books
+  const booksToReturn = matchingBooks.length > 0 ? matchingBooks.slice(0, 8) : sampleBooks.slice(0, 5);
+
+  // Convert to library record format
+  return booksToReturn.map(book => ({
+    title: book.title,
+    author: book.author,
+    isbn: book.isbn,
+    year: book.year,
+    callNumber: book.callNumber,
+    recordId: book.recordId,
+    availability: {
       status: Math.random() > 0.3 ? 'available' : 'on-hold',
-      branch: preferredBranch || 'Toronto Reference Library',
+      branch: preferredBranch || getBranchForBook(book.callNumber),
       copies: Math.floor(Math.random() * 5) + 1,
       holds: Math.floor(Math.random() * 10)
-    };
-    
-    // Generate hold URL (TPL's actual hold system would require authentication)
-    record.holdUrl = `https://torontopubliclibrary.ca/search?searchTerm=${encodeURIComponent(record.title)}`;
-    
-    return record;
-    
-  } catch (error) {
-    console.error('Error parsing MARC record:', error);
-    return null;
-  }
+    },
+    holdUrl: `https://torontopubliclibrary.ca/search?searchTerm=${encodeURIComponent(book.title)}`
+  }));
+}
+
+function getBranchForBook(callNumber) {
+  const branches = [
+    'Toronto Reference Library',
+    'North York Central Library', 
+    'Scarborough Civic Centre',
+    'Etobicoke Civic Centre',
+    'Beaches',
+    'High Park',
+    'Junction',
+    'Riverdale'
+  ];
+  
+  // Assign branch based on call number for consistency
+  const index = callNumber.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % branches.length;
+  return branches[index];
 } 
